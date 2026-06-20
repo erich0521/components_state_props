@@ -1,98 +1,221 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useState, useRef } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  SafeAreaView,
+} from "react-native";
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+const RESET_VALUE = 100;
+const HOLD_DELAY = 400;
+const HOLD_INTERVAL = 80;
 
-export default function HomeScreen() {
+type CounterDisplayProps = {
+  count: number;
+  onAdd: () => void;
+  onMinus: () => void;
+  onReset: () => void;
+  onAddHoldStart: () => void;
+  onAddHoldEnd: () => void;
+  onMinusHoldStart: () => void;
+  onMinusHoldEnd: () => void;
+};
+
+function CounterDisplay({
+  count,
+  onAdd,
+  onMinus,
+  onReset,
+  onAddHoldStart,
+  onAddHoldEnd,
+  onMinusHoldStart,
+  onMinusHoldEnd,
+}: CounterDisplayProps) {
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <View style={styles.childCard}>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      <View style={styles.propsTag} />
+
+      <Text style={styles.countLabel}>CURRENT COUNT</Text>
+      <Text style={styles.countNumber}>{count}</Text>
+
+      <View style={styles.divider} />
+
+      <View style={styles.addMinusRow}>
+        <Pressable
+          style={({ pressed }) => [styles.oblongBtn, styles.btnMinus, pressed && styles.btnPressed]}
+          onPress={onMinus}
+          onLongPress={onMinusHoldStart}
+          onPressOut={onMinusHoldEnd}
+          delayLongPress={HOLD_DELAY}
+        >
+          <Text style={styles.oblongBtnTextOutline}>− Minus</Text>
+        </Pressable>
+
+        <Pressable
+          style={({ pressed }) => [styles.oblongBtn, styles.btnAdd, pressed && styles.btnPressed]}
+          onPress={onAdd}
+          onLongPress={onAddHoldStart}
+          onPressOut={onAddHoldEnd}
+          delayLongPress={HOLD_DELAY}
+        >
+          <Text style={styles.oblongBtnTextSolid}>+ Add</Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.propsTag} />
+
+      <Pressable
+        style={({ pressed }) => [styles.resetBtn, pressed && styles.btnPressed]}
+        onPress={onReset}
+      >
+        <Text style={styles.resetBtnText}>↺  Reset to {RESET_VALUE}</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+export default function ParentScreen() {
+  const [count, setCount] = useState(RESET_VALUE);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const clearHold = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  };
+
+  const startHold = (delta: number) => {
+    clearHold();
+    intervalRef.current = setInterval(() => {
+      setCount((c) => c + delta);
+    }, HOLD_INTERVAL);
+  };
+
+  return (
+    <SafeAreaView style={styles.safe}>
+      <View style={styles.parentCard}>
+        <Text style={styles.parentLabel}>COUNT DISPLAY</Text>
+
+        <CounterDisplay
+          count={count}
+          onAdd={() => setCount((c) => c + 1)}
+          onMinus={() => setCount((c) => c - 1)}
+          onReset={() => setCount(RESET_VALUE)}
+          onAddHoldStart={() => startHold(1)}
+          onAddHoldEnd={clearHold}
+          onMinusHoldStart={() => startHold(-1)}
+          onMinusHoldEnd={clearHold}
+        />
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  safe: {
+    flex: 1,
+    backgroundColor: "#556b2f",
+    justifyContent: "center",
+    alignItems: "center",
   },
-  stepContainer: {
-    gap: 8,
+  parentCard: {
+    width: "88%",
+    backgroundColor: "rgba(255, 255, 255, 0.18)",
+    borderRadius: 32,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.35)",
+    padding: 28,
+    alignItems: "center",
+  },
+  parentLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 4,
+    color: "#FFFFFF",
+    textTransform: "uppercase",
+    marginBottom: 24,
+  },
+  childCard: {
+    width: "100%",
+    alignItems: "center",
+  },
+  propsTag: {
+    height: 0,
+  },
+  countLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: 3,
+    color: "rgba(255,255,255,0.6)",
+    textTransform: "uppercase",
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  countNumber: {
+    fontSize: 110,
+    fontWeight: "200",
+    color: "#FFFFFF",
+    letterSpacing: -6,
+    lineHeight: 120,
+    includeFontPadding: false,
+  },
+  divider: {
+    width: "100%",
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    marginVertical: 28,
+  },
+  addMinusRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 28,
+    width: "100%",
+  },
+  oblongBtn: {
+    flex: 1,
+    paddingVertical: 18,
+    borderRadius: 50,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  btnAdd: {
+    backgroundColor: "#006400",
+  },
+  btnMinus: {
+    backgroundColor: "transparent",
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.6)",
+  },
+  btnPressed: {
+    opacity: 0.6,
+  },
+  oblongBtnTextSolid: {
+    fontSize: 17,
+    fontWeight: "600",
+    color: "#FFFFFF",
+    letterSpacing: 0.5,
+  },
+  oblongBtnTextOutline: {
+    fontSize: 17,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.9)",
+    letterSpacing: 0.5,
+  },
+  resetBtn: {
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 50,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
+    alignItems: "center",
+  },
+  resetBtnText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "rgba(255,255,255,0.8)",
+    letterSpacing: 0.3,
   },
 });
